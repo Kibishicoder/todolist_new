@@ -10,6 +10,10 @@ Django = "^4.1.2"
 asgiref = "^3.5.2"
 psycopg2-binary = "^2.9.5"
 envparse = "^0.2.0"
+djangorestframework = "^3.14.0"
+serializers = "^0.2.4"
+python-multipart = "^0.0.5"
+social-auth-app-django = "^5.0.0"
 
 [tool.poetry.dev-dependencies]
 ansible-vault-win = "^1.0.0"
