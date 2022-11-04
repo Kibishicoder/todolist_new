@@ -4,3 +4,6 @@ psycopg2-binary==2.9.5
 envparse~=0.2.0
 djangorestframework==3.14.0
 social-auth-app-django==5.0.0
+serializers~=0.2.4
+todolist==0.6.0
+django-filter~=22.1

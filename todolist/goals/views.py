@@ -1,9 +1,14 @@
+from django.db import transaction
 from django.db.models import Q
-from rest_framework import permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import permissions, generics, filters
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from goals.models import GoalCategory, Goal
-from goals.serializers import GoalCategoryCreateSerializer, GoalCategorySerializer, GoalCreateSerializer, GoalSerializer
+
+from goals.filters import GoalDateFilter
+from goals.models import GoalCategory, Goal, GoalComment
+from goals.serializers import GoalCategoryCreateSerializer, GoalCategorySerializer, GoalCreateSerializer, \
+    GoalSerializer, GoalCommentCreateSerializer, GoalCommentSerializer
 
 
 class GoalCategoryCreateView(CreateAPIView):
@@ -16,10 +21,7 @@ class GoalCategoryListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoalCategorySerializer
     pagination_class = LimitOffsetPagination
-    filter_backends = [
-        filters.OrderingFilter,
-        filters.SearchFilter,
-    ]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ["title", "created"]
     ordering = ["title"]
     search_fields = ["title"]
@@ -41,8 +43,11 @@ class GoalCategoryView(RetrieveUpdateDestroyAPIView):
         )
 
     def perform_destroy(self, instance: GoalCategory):
-        instance.is_deleted = True
-        instance.save(update_fields=('is_deleted'))
+        #TODO удалять связанные цели атомарно (atomic)
+        with transaction.atomic():
+            instance.is_deleted = True
+            instance.save(update_fields=('is_deleted',))
+            instance.goals.update(status=Goal.Status.archived)
         return instance
 
 
@@ -55,11 +60,8 @@ class GoalListView(ListAPIView):
     model = Goal
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoalSerializer
-    pagination_class = LimitOffsetPagination
-    filter_backends = [
-        filters.OrderingFilter,
-        filters.SearchFilter,
-    ]
+    filterset_class = GoalDateFilter
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ["title", "created"]
     ordering = ["title"]
     search_fields = ["title", "description"]
@@ -79,3 +81,29 @@ class GoalView(RetrieveUpdateDestroyAPIView):
         return Goal.objects.filter(
             Q(user_id=self.request.user.id) & ~Q(status=Goal.Status.archived)
         )
+
+
+class GoalCommentCreateView(generics.CreateAPIView):
+    serializer_class = GoalCommentCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class GoalCommentListView(generics.ListAPIView):
+    model = GoalComment
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = GoalCommentSerializer
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['goal']
+    ordering = ['-created']
+
+    def get_queryset(self):
+        return GoalComment.objects.filter(user_id=self.request.user.id)
+
+
+class GoalCommentView(generics.RetrieveUpdateDestroyAPIView):
+    model = GoalComment
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = GoalCommentSerializer
+
+    def get_queryset(self):
+        return GoalComment.objects.filter(user_id=self.request.user.id)

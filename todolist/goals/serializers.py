@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
 from core.serializers import ProfileSerializer
-from goals.models import GoalCategory, Goal
+from goals.models import GoalCategory, Goal, GoalComment
 
 
 class GoalCategoryCreateSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class GoalCategoryCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GoalCategory
-        fields = "__all__"
+        fields = '__all__'
         read_only_fields = ("id", "created", "updated", "user", "is_deleted")
 
 
@@ -33,7 +33,7 @@ class GoalCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Goal
-        fields = "__all__"
+        fields = '__all__'
         read_only_fields = ("id", "created", "updated", "user")
 
     def validate_category(self, value: Type[GoalCategory]):
@@ -49,10 +49,28 @@ class GoalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Goal
-        fields = "__all__"
+        fields = '__all__'
         read_only_fields = ("id", "created", "updated", "user")
 
     def validate_category(self, value: Type[GoalCategory]):
         if self.context['request'].user != value.user:
             raise PermissionDenied
         return value
+
+
+class GoalCommentCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = GoalComment
+        fields = '__all__'
+        read_only_fields = ("id", "created", "updated", "user")
+
+
+class GoalCommentSerializer(serializers.ModelSerializer):
+    user = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = GoalComment
+        fields = '__all__'
+        read_only_fields = ("id", "created", "updated", "user", "goal")
