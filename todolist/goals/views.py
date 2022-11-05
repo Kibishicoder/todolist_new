@@ -1,109 +1,159 @@
 from django.db import transaction
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, generics, filters
-from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework import generics, permissions, filters
 
 from goals.filters import GoalDateFilter
-from goals.models import GoalCategory, Goal, GoalComment
+from goals.models import GoalCategory, Goal, GoalComment, Board
+from goals.permissions import BoardPermission, GoalCategoryPermission, IsOwnerOrReadOnly, GoalPermission, \
+    CommentPermission
+
 from goals.serializers import GoalCategoryCreateSerializer, GoalCategorySerializer, GoalCreateSerializer, \
-    GoalSerializer, GoalCommentCreateSerializer, GoalCommentSerializer
+    GoalSerializer, GoalCommentCreateSerializer, GoalCommentSerializer, BoardCreateSerializer, BoardSerializer, \
+    BoardListSerializer
 
 
-class GoalCategoryCreateView(CreateAPIView):
+class BoardCreateView(generics.CreateAPIView):
+    permission_classes = [BoardPermission]
+    serializer_class = BoardCreateSerializer
+
+
+class BoardListView(generics.ListAPIView):
+    model = Board
+    permission_classes = [BoardPermission]
+    serializer_class = BoardListSerializer
+    ordering = ['title']
+
+    def get_queryset(self):
+        return Board.objects.filter(participants__user_id=self.request.user.id, is_deleted=False)
+
+
+class BoardView(generics.RetrieveUpdateDestroyAPIView):
+    model = Board
+    permission_classes = [BoardPermission]
+    serializer_class = BoardSerializer
+
+    def get_queryset(self):
+        return Board.objects.prefetch_related('participants').filter(
+            participants__user_id=self.request.user.id,
+            is_deleted=False)
+
+    def perform_destroy(self, instance):
+        with transaction.atomic():
+            instance.is_deleted = True
+            instance.save(update_fields=('is_deleted', ))
+            instance.categories.update(is_deleted=True)
+            Goal.objects.filter(category__board=instance).update(
+                status=Goal.Status.archived
+            )
+        return instance
+
+
+class GoalCategoryCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoalCategoryCreateSerializer
 
 
-class GoalCategoryListView(ListAPIView):
+class GoalCategoryListView(generics.ListAPIView):
     model = GoalCategory
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [GoalCategoryPermission]
     serializer_class = GoalCategorySerializer
-    pagination_class = LimitOffsetPagination
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = ["title", "created"]
-    ordering = ["title"]
-    search_fields = ["title"]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ['board']
+    ordering_fields = ['title', 'created']
+    ordering = ['title']
+    search_fields = ['title']
 
     def get_queryset(self):
-        return GoalCategory.objects.filter(
-            user=self.request.user, is_deleted=False
+        return GoalCategory.objects.prefetch_related('board__participants').filter(
+            board__participants__user_id=self.request.user.id,
+            is_deleted=False
         )
 
 
-class GoalCategoryView(RetrieveUpdateDestroyAPIView):
+class GoalCategoryView(generics.RetrieveUpdateDestroyAPIView):
     model = GoalCategory
     serializer_class = GoalCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [GoalCategoryPermission, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        return GoalCategory.objects.filter(
-            user=self.request.user, is_deleted=False
+        return GoalCategory.objects.prefetch_related('board__participants').filter(
+            board__participants__user_id=self.request.user.id,
+            is_deleted=False
         )
 
     def perform_destroy(self, instance: GoalCategory):
-        #TODO удалять связанные цели атомарно (atomic)
         with transaction.atomic():
             instance.is_deleted = True
             instance.save(update_fields=('is_deleted',))
-            instance.goals.update(status=Goal.Status.archived)
+            Goal.objects.filter(category=instance).update(status=Goal.Status.archived)
         return instance
 
 
-class GoalCreateView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+class GoalCreateView(generics.CreateAPIView):
     serializer_class = GoalCreateSerializer
+    permission_classes = [GoalPermission]
 
 
-class GoalListView(ListAPIView):
+class GoalListView(generics.ListAPIView):
     model = Goal
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [GoalPermission]
     serializer_class = GoalSerializer
     filterset_class = GoalDateFilter
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = ["title", "created"]
-    ordering = ["title"]
-    search_fields = ["title", "description"]
+    ordering_fields = ['title', 'created']
+    ordering = ['title']
+    search_fields = ['title', 'description']
 
     def get_queryset(self):
-        return Goal.objects.filter(
-            Q(user_id=self.request.user.id) & ~Q(status=Goal.Status.archived)
+        return Goal.objects.select_related('user', 'category__board').filter(
+            Q(category__board__participants__user_id=self.request.user.id)
+            & ~Q(status=Goal.Status.archived)
         )
 
 
-class GoalView(RetrieveUpdateDestroyAPIView):
+class GoalView(generics.RetrieveUpdateAPIView):
     model = Goal
+    permission_classes = [GoalPermission, IsOwnerOrReadOnly]
     serializer_class = GoalSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Goal.objects.filter(
-            Q(user_id=self.request.user.id) & ~Q(status=Goal.Status.archived)
+        return Goal.objects.select_related('user', 'category__board').filter(
+            Q(category__board__participants__user_id=self.request.user.id)
+            & ~Q(status=Goal.Status.archived)
         )
+
+    def perform_destroy(self, instance: Goal):
+        instance.status = Goal.Status.archived
+        instance.save(update_fields=('status',))
+        return instance
 
 
 class GoalCommentCreateView(generics.CreateAPIView):
     serializer_class = GoalCommentCreateSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CommentPermission]
 
 
 class GoalCommentListView(generics.ListAPIView):
     model = GoalComment
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CommentPermission]
     serializer_class = GoalCommentSerializer
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['goal']
     ordering = ['-created']
 
     def get_queryset(self):
-        return GoalComment.objects.filter(user_id=self.request.user.id)
+        return GoalComment.objects.select_related('goal__category__board', 'user').filter(
+            goal__category__board__participants__user_id=self.request.user.id
+        )
 
 
 class GoalCommentView(generics.RetrieveUpdateDestroyAPIView):
     model = GoalComment
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CommentPermission, IsOwnerOrReadOnly]
     serializer_class = GoalCommentSerializer
 
     def get_queryset(self):
-        return GoalComment.objects.filter(user_id=self.request.user.id)
+        return GoalComment.objects.select_related('goal__category__board', 'user').filter(
+            goal__category__board__participants__user_id=self.request.user.id
+        )
