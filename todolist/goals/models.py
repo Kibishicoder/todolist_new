@@ -1,6 +1,5 @@
 from django.db import models
 from django.db.models import ForeignKey
-
 from core.models import User
 
 

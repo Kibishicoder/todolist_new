@@ -1,6 +1,5 @@
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
-
 from goals.models import BoardParticipant, GoalCategory, Goal, Board, GoalComment
 
 

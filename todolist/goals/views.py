@@ -41,7 +41,7 @@ class BoardView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         with transaction.atomic():
             instance.is_deleted = True
-            instance.save(update_fields=('is_deleted', ))
+            instance.save(update_fields=('is_deleted',))
             instance.categories.update(is_deleted=True)
             Goal.objects.filter(category__board=instance).update(
                 status=Goal.Status.archived
