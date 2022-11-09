@@ -20,7 +20,7 @@ services:
       - backend_nw
 
   api:
-    image: ${DOCKERHUB_USERNAME}/todolist_diploma6_:latest
+    image: ${DOCKERHUB_USERNAME}/todolist_diploma6:latest
     restart: always
     env_file:
       - ./.env
@@ -48,7 +48,7 @@ services:
 
 
   bot:
-    image: ${DOCKER_USERNAME}/todolist_deploma6_:latest
+    image: ${DOCKERHUB_USERNAME}/todolist_diploma6:latest
     restart: always
     env_file:
       - ./.env
