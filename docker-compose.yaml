@@ -18,7 +18,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
-
     networks:
       - backend_nw
 
@@ -42,12 +41,12 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
-    volumes:
-      - ./todolist/:/opt/todolist
-
     networks:
       - backend_nw
       - frontend_nw
+    volumes:
+      - ./todolist/:/opt/todolist
+
 
 
   frontend:
@@ -57,12 +56,12 @@ services:
       - "80:80"
     depends_on:
       - api
+    networks:
+      - frontend_nw
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./static/:/opt/static/
 
-    networks:
-      - frontend_nw
 
   bot:
     build:
@@ -77,7 +76,6 @@ services:
       postgres:
         condition: service_healthy
     command: python3 manage.py runbot
-
     networks:
       - backend_nw
 
