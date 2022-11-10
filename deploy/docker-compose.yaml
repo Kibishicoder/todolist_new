@@ -34,19 +34,6 @@ services:
       - frontend_nw
 
 
-  frontend:
-    image: sermalenk/skypro-front:lesson-38
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - api
-    networks:
-      - frontend_nw
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-
-
   bot:
     image: ${DOCKERHUB_USERNAME}/todolist_diploma6:latest
     restart: always
@@ -61,6 +48,18 @@ services:
     networks:
       - backend_nw
 
+
+  frontend:
+    image: sermalenk/skypro-front:lesson-38
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - frontend_nw
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
 
 
 volumes:

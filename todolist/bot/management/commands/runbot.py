@@ -100,7 +100,6 @@ class Command(BaseCommand):
             )
             self.tg_client.send_message(msg.chat.id, '[New goal created]')
         else:
-            #TODO: log
             self.tg_client.send_message(msg.chat.id, '[something went wrong]')
         self.storage.reset(tg_user.chat_id)
 

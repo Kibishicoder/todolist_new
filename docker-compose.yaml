@@ -48,21 +48,6 @@ services:
       - ./todolist/:/opt/todolist
 
 
-
-  frontend:
-    image: sermalenk/skypro-front:lesson-38
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - api
-    networks:
-      - frontend_nw
-    volumes:
-      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./static/:/opt/static/
-
-
   bot:
     build:
       context: .
@@ -78,6 +63,20 @@ services:
     command: python3 manage.py runbot
     networks:
       - backend_nw
+
+
+  frontend:
+    image: sermalenk/skypro-front:lesson-38
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - frontend_nw
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./static/:/opt/static/
 
 
 volumes:
