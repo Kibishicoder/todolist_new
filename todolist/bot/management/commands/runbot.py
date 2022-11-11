@@ -1,16 +1,17 @@
 import logging
 import os
 from datetime import datetime
+from enum import IntEnum, auto
+
 from django.core.management import BaseCommand
-from enum import IntEnum, auto, IntFlag
 from pydantic import BaseModel
+
 from bot.models import TgUser
 from bot.tg.client import TgClient
 from bot.tg.fsm.memory_storage import MemoryStorage
 from bot.tg.models import Message
 from goals.models import Goal, GoalCategory, BoardParticipant
 from todolist import settings
-
 
 logger = logging.getLogger(__name__)
 
