@@ -42,7 +42,7 @@ services:
     environment:
       POSTGRES_HOST: postgres
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
     command: python3 manage.py runbot
     networks:
