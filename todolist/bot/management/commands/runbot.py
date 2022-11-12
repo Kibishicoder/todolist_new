@@ -1,10 +1,9 @@
 import logging
 import os
 from datetime import datetime
-from enum import IntEnum, auto
-
-from django.core.management import BaseCommand
+from enum import Enum, auto
 from pydantic import BaseModel
+from django.core.management import BaseCommand
 
 from bot.models import TgUser
 from bot.tg.client import TgClient
@@ -25,7 +24,7 @@ class NewGoal(BaseModel):
         return None not in [self.category_id, self.goal_title]
 
 
-class StateEnum(IntEnum):
+class StateEnum(Enum):
     CREATE_CATEGORY_SELECT = auto()
     CHOSEN_CATEGORY = auto()
 
