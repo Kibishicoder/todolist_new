@@ -55,7 +55,7 @@ jobs:
             --env-file $(pwd)/deploy/.env \
             --entrypoint  '' \
             -v $(pwd)/deploy/static/:/opt/static/:rw \
-            ${{ secrets.DOCKER_USERNAME }}/homework33:latest \
+            ${{ secrets.DOCKER_USERNAME }}/homework38:latest \
             python manage.py collectstatic -c --no-input
       - name: Copy on server
         uses: appleboy/scp-action@master
