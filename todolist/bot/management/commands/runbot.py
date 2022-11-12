@@ -41,11 +41,11 @@ class Command(BaseCommand):
 
     def handle_unverified_user(self, msg: Message, tg_user: TgUser):
         code: str = self._generate_verification_code()
-        tg_user.verification_code = code
+        tg_user.verefication_code = code
         tg_user.save(update_fields=('verification_code',))
         self.tg_client.send_message(
             chat_id=msg.chat.id,
-            text=f'[verification code] {tg_user.verification_code}'
+            text=f'[verification code] {tg_user.verefication_code}'
         )
 
     def handle_verified_user(self, msg: Message, tg_user: TgUser):
