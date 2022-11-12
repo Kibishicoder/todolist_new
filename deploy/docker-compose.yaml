@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
 
-  postgres:
+  db:
     image: postgres:13.0-alpine
     restart: on-failure
     environment:
@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pg_data_todolist:/var/lib/postgresql/data
+      - pg_data_todolist1:/var/lib/postgresql/data
     healthcheck:
       test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
       interval: 3s
@@ -26,9 +26,9 @@ services:
     env_file:
       - ./.env
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: db
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     networks:
       - backend_nw
@@ -40,9 +40,9 @@ services:
     env_file:
       - ./.env
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: db
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     command: python3 manage.py runbot
     networks:
@@ -62,7 +62,7 @@ services:
       - frontend_nw
 
 volumes:
-  pg_data_todolist:
+  pg_data_todolist1:
 networks:
   backend_nw:
     driver: bridge
