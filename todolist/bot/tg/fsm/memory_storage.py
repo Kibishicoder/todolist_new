@@ -13,7 +13,7 @@ class MemoryStorage(Storage):
         self.data: dict[int, StorageData] = {}
 
     def _resolve_chat(self, chat_id: int):
-        if chat_id in self.data:
+        if chat_id not in self.data:
             self.data[chat_id] = StorageData()
         return self.data[chat_id]
 
