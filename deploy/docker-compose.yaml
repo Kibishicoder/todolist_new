@@ -68,3 +68,4 @@ networks:
     driver: bridge
   frontend_nw:
     driver: bridge
+
