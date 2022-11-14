@@ -1,9 +1,9 @@
 import logging
 import os
 from datetime import datetime
-from enum import Enum, auto
-from pydantic import BaseModel
+from enum import IntEnum, auto
 from django.core.management import BaseCommand
+from pydantic import BaseModel
 
 from bot.models import TgUser
 from bot.tg.client import TgClient
@@ -24,7 +24,7 @@ class NewGoal(BaseModel):
         return None not in [self.category_id, self.goal_title]
 
 
-class StateEnum(Enum):
+class StateEnum(IntEnum):
     CREATE_CATEGORY_SELECT = auto()
     CHOSEN_CATEGORY = auto()
 
@@ -47,27 +47,6 @@ class Command(BaseCommand):
             chat_id=msg.chat.id,
             text=f'[verification code] {tg_user.verification_code}'
         )
-
-    def handle_verified_user(self, msg: Message, tg_user: TgUser):
-        if msg.text == '/goals':
-            self.handle_goals_list(msg, tg_user)
-        elif msg.text == '/create':
-            self.handle_goal_categories_list(msg, tg_user)
-            self.storage.set_state(msg.chat.id, state=StateEnum.CREATE_CATEGORY_SELECT)
-            self.storage.set_data(msg.chat.id, data=NewGoal().dict())
-        elif msg.text == '/cancel' and self.storage.get_state(tg_user.chat_id):
-            self.storage.reset(tg_user.chat_id)
-            self.tg_client.send_message(msg.chat.id, '[canceled]')
-        elif state := self.storage.get_state(tg_user.chat_id):
-            match state:
-                case StateEnum.CREATE_CATEGORY_SELECT:
-                    self.handle_save_selected_category(msg, tg_user)
-                case StateEnum.CHOSEN_CATEGORY:
-                    self.handle_save_new_category(msg, tg_user)
-                case _:
-                    logger.warning('Invalid state: %s', state)
-        elif msg.text.startswith('/'):
-            self.tg_client.send_message(msg.chat.id, '[unknown command]')
 
     def handle_goals_list(self, msg: Message, tg_user: TgUser):
         resp_goals: list[str] = [
@@ -117,12 +96,33 @@ class Command(BaseCommand):
                 title=goal.goal_title,
                 category_id=goal.category_id,
                 user_id=tg_user.user_id,
-                due_date=datetime.now()
+                due_date=datetime.now() 
             )
             self.tg_client.send_message(msg.chat.id, '[New goal created]')
         else:
-            self.tg_client.send_message(msg.chat.id, '[something went wrong]')
+            self.tg_client.send_message(msg.chat.id, '[something gone wrong]')
         self.storage.reset(tg_user.chat_id)
+
+    def handle_verified_user(self, msg: Message, tg_user: TgUser):
+        if msg.text == '/goals':
+            self.handle_goals_list(msg, tg_user)
+        elif msg.text == '/create':
+            self.handle_goal_categories_list(msg, tg_user)
+            self.storage.set_state(msg.chat.id, state=StateEnum.CREATE_CATEGORY_SELECT)
+            self.storage.set_data(msg.chat.id, data=NewGoal().dict())
+        elif msg.text == '/cancel' and self.storage.get_state(tg_user.chat_id):
+            self.storage.reset(tg_user.chat_id)
+            self.tg_client.send_message(msg.chat.id, '[canceled]')
+        elif state := self.storage.get_state(tg_user.chat_id):
+            match state:
+                case StateEnum.CREATE_CATEGORY_SELECT:
+                    self.handle_save_selected_category(msg, tg_user)
+                case StateEnum.CHOSEN_CATEGORY:
+                    self.handle_save_new_category(msg, tg_user)
+                case _:
+                    logger.warning('Invalid state: %s', state)
+        elif msg.text.startswith('/'):
+            self.tg_client.send_message(msg.chat.id, '[unknown command]')
 
     def handle_message(self, msg: Message):
         tg_user, _ = TgUser.objects.select_related('user').get_or_create(
