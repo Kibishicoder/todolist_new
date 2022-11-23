@@ -123,7 +123,8 @@ class GoalView(generics.RetrieveUpdateAPIView):
             & ~Q(status=Goal.Status.archived)
         )
 
-    def perform_destroy(self, instance: Goal):
+    @staticmethod
+    def perform_destroy(instance: Goal):
         instance.status = Goal.Status.archived
         instance.save(update_fields=('status',))
         return instance

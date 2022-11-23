@@ -41,5 +41,3 @@ class CommentPermission(IsAuthenticated):
             request.method in permissions.SAFE_METHODS,
             obj.user_id == request.user.id
         ))
-
-
